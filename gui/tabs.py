@@ -6,13 +6,13 @@ one build function per calculator tab
 import tkinter as tk
 from tkinter import ttk
 
-from tools.calculators import (
+from tools.calculators import (     #importing the functions from calculators file
     find_combinations, fmt_r,
     vdiv_vout, vdiv_r1, vdiv_r2,
     idiv_currents, idiv_find_r2,
     ohm_solve,
 )
-from gui.widgets import (
+from gui.widgets import (       #importing the functions from the widgets file
     BG,
     FONT_sm, clear_entries,
     labeled_entry, labeled_combo,
@@ -23,6 +23,13 @@ from gui.widgets import (
 #TAB 1 -- Resistor Combinations
 
 def build_resistor_tab(notebook):
+    """
+    Resistor combinations tab
+    Finds series or paralel resistor combinations from the E24 standard series
+    that are closest to a target resistance value within a given error margin.
+    """
+
+    #Create the tab frame and add it to the notebook
     frame = tk.Frame(notebook, bg=BG)
     notebook.configure(style="TNotebook")
     notebook.add(frame, text="Resistor Combinations")
@@ -44,8 +51,8 @@ def build_resistor_tab(notebook):
         try:
             target = get_float(e_target, "Target")
             maxxerr = get_float(e_maxerr, "Max accepted error")
-            mode = v_mode.get().lower()
-            count = int(v_count.get())
+            mode = v_mode.get().lower() #reading the selected operation mode (series/paralel)
+            count = int(v_count.get()) #reading the selected number of resistors
 
             matches = find_combinations(target, mode, count, maxxerr)
 
@@ -53,7 +60,7 @@ def build_resistor_tab(notebook):
                 show_result(res_text, f"No combinations found whithin +- {maxxerr}% of {fmt_r(target)}.\n", is_error=True)
                 return
 
-            sep = " + " if mode == "series" else " || "
+            sep = " + " if mode == "series" else " || "     #separation characters based on operation mode
             lines = [f"Target: {fmt_r(target)} | {mode} | {count} resistors\n\n"]
             for m in matches:
                 combo_str = sep.join(fmt_r(v) for v in m["values"])
@@ -67,19 +74,28 @@ def build_resistor_tab(notebook):
             show_result(res_text, f"Error: {e}", is_error=True)
 
     def clear_res_comb():
-        clear_entries(e_target, e_maxerr)
-        show_result(res_text, "")
+        clear_entries(e_target, e_maxerr)   #clear input fields
+        show_result(res_text, "")           #clear result box
 
     button_row(frame, "Find Combinations", calculate, clear_res_comb, row=4)
 
 #TAB 2 -- Voltage divider
 
 def build_vdiv_tab(notebook):
+    """
+    Voltage divider tab
+    Modes of operation:
+    -R1, R2 known -> calculate Vout
+    -Vout and R1 known -> solve for R2
+    -Vout and R2 known -> solve for R1
+    Also shows total current and power dissipated in each resistor.
+    """
+
     frame = tk.Frame(notebook, bg=BG)
     notebook.add(frame, text="Voltage Divider")
     frame.columnconfigure(1, weight=1)
 
-    modes = [
+    modes = [                   #mode selection fields
         "R1, R2 -> Vout",
         "Vout, R1 -> R2",
         "Vout, R2 -> R1",
@@ -87,13 +103,15 @@ def build_vdiv_tab(notebook):
 
     v_mode = labeled_combo(frame, "Mode:", modes, row=0, col=0)
 
+    #inputs
     e_vin = labeled_entry(frame, "Vin (V):", default="", row=1, col=0)
     e_vout = labeled_entry(frame, "Vout (V):", default="", row=2, col=0)
     e_r1 = labeled_entry(frame, "R1 (Ohms):", default="", row=3, col=0)
     e_r2 = labeled_entry(frame, "R2 (Ohms):", default="", row=4, col=0)
 
-    ttk.Label(frame, text="Leave the unknown field empty.", font=FONT_sm, foreground="#aaaaaa", background=BG).grid(row=5, column=0, sticky="w", padx=10, pady=(0, 4))
+    ttk.Label(frame, text="Leave the unknown field empty.", font=FONT_sm, foreground="#aaaaaa", background=BG).grid(row=5, column=0, sticky="w", padx=10, pady=(0, 4)) #hint label, guides the user
 
+    #result box
     res_frame, res_text = result_box(frame)
     res_frame.grid(row=7, column=0, columnspan=2,  sticky="nsew", padx=10, pady=6)
     frame.rowconfigure(7, weight=1)
@@ -132,33 +150,42 @@ def build_vdiv_tab(notebook):
             show_result(res_text, f"Error: {e}", is_error=True)
 
     def clear_vdiv():
-        clear_entries(e_vin, e_vout, e_r1, e_r2)
-        show_result(res_text, "")
+        clear_entries(e_vin, e_vout, e_r1, e_r2)    #clear input fields
+        show_result(res_text, "")                   #clear result box
 
     button_row(frame, "Calculate", calculate, clear_vdiv, row=6)
 
 #TAB 3 -- Current Divider
 
 def build_idiv_tab(notebook):
+    """
+    Current divider tab
+    Modes of operation:
+    -R1, R2 known -> calculate branch currents
+    -Target I1 and R1 known -> calculate R2
+    Also shows paralell resistance and voltage across both resistors.
+    """
     frame = tk.Frame(notebook, bg=BG)
     notebook.configure(style="TNotebook")
     notebook.add(frame, text="Current Divider")
     frame.columnconfigure(1, weight=1)
     frame.columnconfigure(0, weight=1)
 
-    modes = [
+    modes = [                           #mode selection field
         "R1, R2 -> branch currents",
         "Target I1 + R1 -> R2"
     ]
 
+    #inputs
     v_mode = labeled_combo(frame, "Mode:", modes, row=0, col=0)
     e_itot = labeled_entry(frame, "Itot (mA):", default="", row=1, col=0)
     e_r1 = labeled_entry(frame, "R1 (Ohms)", default="", row=2, col=0)
     e_r2 = labeled_entry(frame, "R2 (Ohms):", default="", row=3, col=0)
     e_i1 = labeled_entry(frame, "I1 (mA):", default="", row=4, col=0)
 
-    ttk.Label(frame, text="For mode 2: fill Target I1, leave R2 emplty.", font=FONT_sm, foreground="#aaaaaa", background=BG).grid(row=5, column=0, columnspan=2, sticky="w", padx=10)
+    ttk.Label(frame, text="For mode 2: fill Target I1, leave R2 emplty.", font=FONT_sm, foreground="#aaaaaa", background=BG).grid(row=5, column=0, columnspan=2, sticky="w", padx=10) #hint label
 
+    #result box
     res_frame, res_text = result_box(frame)
     res_frame.grid(row=7, column=0, columnspan=2, sticky="nsew", padx=10, pady=6)
     frame.rowconfigure(7, weight=1)
@@ -187,21 +214,26 @@ def build_idiv_tab(notebook):
             show_result(res_text, f"Error: {e}", is_error=True)
 
     def clear_idiv():
-        clear_entries(e_itot, e_r1, e_r2, e_i1)
-        show_result(res_text, "")
+        clear_entries(e_itot, e_r1, e_r2, e_i1)     #clear input fields
+        show_result(res_text, "")                   #clear result box
 
     button_row(frame, "Calculate", calculate, clear_idiv, row=6)
 
 #TAB 4 -- Ohm's Law
 
 def build_ohm_tab(notebook):
+    """
+    Ohm's Law tab
+    Entry any two of the fields and the remaining two are calculated
+    """
     frame = tk.Frame(notebook, bg=BG)
     notebook.add(frame, text="Ohm's Law")
     frame.columnconfigure(1, weight=1)
     frame.columnconfigure(0, weight=1)
 
-    ttk.Label(frame, text="Enter any two values and leave the rest empty.", font=FONT_sm, foreground="#aaaaaa", background=BG).grid(row=5, column=0, columnspan=2, sticky="w", padx=10)
+    ttk.Label(frame, text="Enter any two values and leave the rest empty.", font=FONT_sm, foreground="#aaaaaa", background=BG).grid(row=5, column=0, columnspan=2, sticky="w", padx=10) #hint label
 
+    #inputs
     e_v = labeled_entry(frame, "Voltage (V):", default="", row=1, col=0)
     e_i = labeled_entry(frame, "Current (A):", default="", row=2, col=0)
     e_r = labeled_entry(frame, "Resistance (Ohms):", default="", row=3, col=0)
@@ -213,25 +245,26 @@ def build_ohm_tab(notebook):
 
     def calculate():
         try:
+            # read all four fields, empty ones return None
             v = get_optional_float(e_v)
             i = get_optional_float(e_i)
             r = get_optional_float(e_r)
             p = get_optional_float(e_p)
 
-            res = ohm_solve(v=v, i=i, r=r, p=p)
+            res = ohm_solve(v=v, i=i, r=r, p=p) #function that determines which tow are known and solves the rest
 
             show_result(res_text,
                         f" V = {res['v']:.5f} V\n"
-                        f" I = {res['i'] * 1000:.5f} mA\n"
+                        f" I = {res['i'] * 1000:.5f} mA\n"      #convert A to mA
                         f" R = {fmt_r(res['r'])}\n"
-                        f" P = {res['p'] * 1000:.5f} mW\n"
+                        f" P = {res['p'] * 1000:.5f} mW\n"      #convert W to mW
             )
 
         except Exception as e:
             show_result(res_text, f"Error: {e}", is_error=True)
 
     def clear_ohm():
-        clear_entries(e_v, e_i, e_r, e_p)
-        show_result(res_text, "")
+        clear_entries(e_v, e_i, e_r, e_p)       #clear input fields
+        show_result(res_text, "")               #clear result box
 
     button_row(frame, "Solve", calculate, clear_ohm, row=6)
