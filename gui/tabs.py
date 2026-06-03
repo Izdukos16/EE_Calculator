@@ -38,7 +38,7 @@ def build_resistor_tab(notebook):
     #inputs
     e_target = labeled_entry(frame, "Target (Ohms):", default="", row=0, col=0)
     e_maxerr = labeled_entry(frame, "Max accepted error (%):", default="", row=1, col=0)
-    v_mode = labeled_combo(frame, "Mode:", ["Series", "Paralel"], row=2, col=0)
+    v_mode = labeled_combo(frame, "Mode:", ["Series", "Parallel"], row=2, col=0)
     v_count = labeled_combo(frame, "Resistors:", ["2", "3"], row=3, col=0)
 
     #result box
